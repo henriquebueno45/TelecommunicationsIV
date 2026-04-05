@@ -1,6 +1,12 @@
 %% Laboratório 3 - Modulação LORA
 % Alunos: Dener Kraus, Henrique Bueno e Lucas Bueno
 
+%% Atividade 1 - LoRa Calculator
+close all;
+clear
+clc;
+n_pre = 8;
+
 % Parte 1 - Variação de SF
 sf1 = [7 8 9 10 11 12];
 toA1 = [41.21 72.18 144.38 288.76 577.53 991.22]; % ms
@@ -28,3 +34,77 @@ plot(pl, overhead2, '-o')
 xlabel('Payload (bytes)')
 ylabel('Overhead (%)')
 grid on
+
+%% Atividade 2 - Alcance (usando equação do enunciado)
+
+close all;
+clear;
+clc;
+
+% Dados
+sf = [7 8 9 10 11 12];
+sense = [-125.7 -128.5 -131.5 -134.2 -137 -139]; % dBm
+ptx = 14; % dBm
+
+d = 10.^((ptx - 40 - sense) ./ 30); % metros
+d_km = d / 1000; % km
+
+disp('SF   Sens (dBm)   Distância (km)')
+disp([sf' sense' d_km'])
+figure;
+plot(sf, d_km, '-o')
+xlabel('Spreading Factor (SF)')
+ylabel('Distância (km)')
+grid on
+
+%% Atividade 3 - CSS
+clear; 
+clc; 
+close all;
+
+SF_list = [8 10];
+SNRs = [0 5 10];
+m = 100;
+
+for sf_idx = 1:length(SF_list)
+
+    SF = SF_list(sf_idx);
+    M = 2^SF;
+    n = 0:M-1;
+
+    x0 = exp(1j * 2*pi * (n.^2)/(2*M));
+    xm = x0(mod(n + m, M) + 1);
+
+    figure;
+    sgtitle(['Detecção do símbolo (SF = ', num2str(SF), ')']);
+
+    for snr_idx = 1:length(SNRs)
+
+        SNR_dB = SNRs(snr_idx);
+
+        signal_power = mean(abs(xm).^2);
+        noise_power = signal_power / (10^(SNR_dB/10));
+
+        noise = sqrt(noise_power/2) * ...
+                (randn(1,M) + 1j*randn(1,M));
+
+        ym = xm + noise;
+
+        vm = ym .* conj(x0);
+        V = fft(vm, M);
+
+        [~, k_est] = max(abs(V));
+        k_est = k_est - 1;
+
+        fprintf('SF=%d | SNR=%2d dB → Detectado: %3d\n', ...
+                 SF, SNR_dB, k_est);
+
+        subplot(1, length(SNRs), snr_idx);
+        stem(0:M-1, abs(V), 'filled');
+        title(['SNR = ', num2str(SNR_dB), ' dB']);
+        xlabel('k');
+        ylabel('|V[k]|');
+        grid on;
+
+    end
+end
